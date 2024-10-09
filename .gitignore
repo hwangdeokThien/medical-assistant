@@ -163,3 +163,4 @@ cython_debug/
 
 model/llama-2-7b-chat.Q4_0.gguf
 .DS_Store
+data/gale_encyclopedia_of_medicine_vol4.pdf
