@@ -1,43 +1,85 @@
-from .utils import load_pdf, download_embeddings_model, text_split
+import os
+import time
+from uuid import uuid4
+from .utils import load_pdf, text_split, download_embeddings_model
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
-from uuid import uuid4
-import time
-import os
+from concurrent.futures import ThreadPoolExecutor
 
+# Load environment variables
 load_dotenv()
 
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 pinecone_api_env = os.getenv("PINECONE_API_ENV")
 
+# Pinecone client
 pc = Pinecone(api_key=pinecone_api_key)
 
+# Lazy load embeddings model
+embeddings = None
+
+def load_embeddings():
+    global embeddings
+    if embeddings is None:
+        embeddings = download_embeddings_model()
+    return embeddings
+
+def connect_vector_db(index_name="medical-assistant-vector-db", dimension=384):
+    '''
+    Connect to Pinecone and create an index if necessary.
+    Returns: Pinecone vector store
+    '''
+    try:
+        existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
+        
+        if index_name not in existing_indexes:
+            pc.create_index(
+                name=index_name,
+                dimension=dimension,
+                metric="cosine",
+                spec=ServerlessSpec(cloud="aws", region="us-east-1"),
+            )
+            while not pc.describe_index(index_name).status["ready"]:
+                time.sleep(1)
+        
+        index = pc.Index(index_name)
+        vector_store = PineconeVectorStore(index=index, embedding=load_embeddings())
+        return vector_store
+    
+    except Exception as e:
+        raise RuntimeError(f"Error connecting to Pinecone: {str(e)}")
+
+def add_documents_to_index(vector_store, text_chunks, batch_size=100):
+    '''
+    Add documents to Pinecone in batches.
+    '''
+    uuids = [str(uuid4()) for _ in range(len(text_chunks))]
+    
+    try:
+        for i in range(0, len(text_chunks), batch_size):
+            batch = text_chunks[i:i+batch_size]
+            batch_uuids = uuids[i:i+batch_size]
+            vector_store.add_documents(documents=batch, ids=batch_uuids)
+    except Exception as e:
+        raise RuntimeError(f"Error adding documents to Pinecone: {str(e)}")
+
+def clear_all_records_from_index(vector_store):
+    '''
+    Clears all records from Pinecone index.
+    '''
+    try:
+        vector_store.delete(delete_all=True)
+    except Exception as e:
+        raise RuntimeError(f"Error clearing Pinecone index: {str(e)}")
+
+
+# Extract and preprocess data
 extracted_data = load_pdf("data/")
 text_chunks = text_split(extracted_data)
-embeddings = download_embeddings_model()
 
+# Connect to Pinecone vector store
+vector_store = connect_vector_db()
 
-# connect to index
-index_name = 'medical-assistant-vector-db'
-existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
-
-if index_name not in existing_indexes:
-    pc.create_index(
-        name=index_name,
-        dimension=3072,
-        metric="cosine",
-        spec=ServerlessSpec(cloud="aws", region="us-east-1"),
-    )
-    while not pc.describe_index(index_name).status["ready"]:
-        time.sleep(1)
-
-index = pc.Index(index_name)
-vector_store = PineconeVectorStore(index=index, embedding=embeddings)
-
-# clear all the current docs, restore the space
-# index.delete(delete_all=True) # we can set the specific name space as well
-
-# add documents to vector db
-uuids = [str(uuid4()) for _ in range(len(text_chunks))]
-vector_store.add_documents(documents=text_chunks, ids=uuids)
+# Add documents
+add_documents_to_index(vector_store=vector_store, text_chunks=text_chunks)
