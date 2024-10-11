@@ -45,11 +45,13 @@ border-radius: 0 0 15px 15px !important;
    outline:0px !important;
 }
 .type_msg{
+	flex: 1;
 	background-color: rgba(255, 255, 255, 0.5) !important;
 	border:0 !important;
 	color:black !important;
 	height: 60px !important;
 	overflow-y: auto;
+	border-radius: 15px 0 0 15px !important;
 }
 	.type_msg:focus{
 	 box-shadow:none !important;
