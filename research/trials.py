@@ -78,4 +78,4 @@ rag_chain = (
 
 print('oke')
 response = rag_chain.invoke('What are Allergies?')
-print("Response : ", response)
+print("Response: ", response)
