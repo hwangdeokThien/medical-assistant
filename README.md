@@ -1,6 +1,7 @@
 # 🎉 Welcome to **Medical Assistant powered by Llama 2** 👋
 
 **Medical Assistant powered by Llama 2** is an AI-driven application designed to provide users with intelligent medical advice. The assistant processes natural language queries and responds with medical information based on advanced AI models, helping users make informed decisions about their health.
+<img width="1440" alt="med_ast_demo" src="https://github.com/user-attachments/assets/db266343-6ae5-448f-b6c6-55fc870bb966">
 
 ## 🌟 Key Features:
 - AI-powered medical advice and responses.
