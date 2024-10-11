@@ -81,8 +81,10 @@ def clear_all_records_from_index(vector_store):
         raise RuntimeError(f"Error clearing Pinecone index: {str(e)}")
 
 
-# Connect to Pinecone vector store
+# Load data
 extracted_data = load_pdf("data/")
 text_chunks = text_split(extracted_data)
+
+# Connect vector db
 vector_store = connect_vector_db()
 # vector_store = connect_vector_db(add_to_index=True, text_chunks=text_chunks)
