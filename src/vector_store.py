@@ -5,7 +5,6 @@ from .utils import load_pdf, text_split, download_embeddings_model
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
 from dotenv import load_dotenv
-from concurrent.futures import ThreadPoolExecutor
 
 # Load environment variables
 load_dotenv()
@@ -25,15 +24,17 @@ def load_embeddings():
         embeddings = download_embeddings_model()
     return embeddings
 
-def connect_vector_db(index_name="medical-assistant-vector-db", dimension=384):
+def connect_vector_db(index_name="medical-assistant-vector-db", dimension=384, add_to_index=False, text_chunks=None):
     '''
     Connect to Pinecone and create an index if necessary.
     Returns: Pinecone vector store
     '''
     try:
         existing_indexes = [index_info["name"] for index_info in pc.list_indexes()]
+        print(existing_indexes)
         
         if index_name not in existing_indexes:
+            print("Creating index")
             pc.create_index(
                 name=index_name,
                 dimension=dimension,
@@ -45,6 +46,12 @@ def connect_vector_db(index_name="medical-assistant-vector-db", dimension=384):
         
         index = pc.Index(index_name)
         vector_store = PineconeVectorStore(index=index, embedding=load_embeddings())
+
+        if add_to_index:
+            if text_chunks is None:
+                raise ValueError("text_chunks must be provided if add_to_index is True")
+            add_documents_to_index(vector_store=vector_store, text_chunks=text_chunks)
+
         return vector_store
     
     except Exception as e:
@@ -74,12 +81,8 @@ def clear_all_records_from_index(vector_store):
         raise RuntimeError(f"Error clearing Pinecone index: {str(e)}")
 
 
-# Extract and preprocess data
+# Connect to Pinecone vector store
 extracted_data = load_pdf("data/")
 text_chunks = text_split(extracted_data)
-
-# Connect to Pinecone vector store
 vector_store = connect_vector_db()
-
-# Add documents
-add_documents_to_index(vector_store=vector_store, text_chunks=text_chunks)
+# vector_store = connect_vector_db(add_to_index=True, text_chunks=text_chunks)

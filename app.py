@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-from langchain.llms import CTransformers
+from langchain_community.llms import CTransformers
 from src.vector_store import vector_store
 from src.prompt import prompt_template
 from langchain.prompts import PromptTemplate
